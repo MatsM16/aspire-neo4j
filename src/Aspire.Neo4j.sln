@@ -2,9 +2,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.34607.79
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppHost", "AppHost\AppHost.csproj", "{CC610D1B-C2CB-419A-AE13-209CC55B67A5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AppHost", "AppHost\AppHost.csproj", "{CC610D1B-C2CB-419A-AE13-209CC55B67A5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceDefaults", "ServiceDefaults\ServiceDefaults.csproj", "{4E1E384F-605F-4422-8EE0-CFB4A90548BB}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ApiService", "ApiService\ApiService.csproj", "{815526C0-397E-4763-AC6C-3BA426DCAD54}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aspire.Neo4j", "Aspire.Neo4j\Aspire.Neo4j.csproj", "{D6DD79E6-3E65-46AC-A896-ED2C9DEB0517}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,6 +24,14 @@ Global
 		{4E1E384F-605F-4422-8EE0-CFB4A90548BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E1E384F-605F-4422-8EE0-CFB4A90548BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E1E384F-605F-4422-8EE0-CFB4A90548BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{815526C0-397E-4763-AC6C-3BA426DCAD54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{815526C0-397E-4763-AC6C-3BA426DCAD54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{815526C0-397E-4763-AC6C-3BA426DCAD54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{815526C0-397E-4763-AC6C-3BA426DCAD54}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6DD79E6-3E65-46AC-A896-ED2C9DEB0517}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6DD79E6-3E65-46AC-A896-ED2C9DEB0517}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6DD79E6-3E65-46AC-A896-ED2C9DEB0517}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6DD79E6-3E65-46AC-A896-ED2C9DEB0517}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
