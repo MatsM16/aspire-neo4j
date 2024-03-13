@@ -1,5 +1,5 @@
 ﻿namespace Aspire.Neo4j.AppHost.Neo4j;
-
+/*
 public static class Neo4jBuilderExtensions
 {
     public static IResourceBuilder<Neo4jServerResource> AddNeo4j(this IDistributedApplicationBuilder builder, string name, int? port = null)
@@ -23,3 +23,4 @@ public static class Neo4jBuilderExtensions
         return builder.WithManifestPublishingCallback(context => context.WriteConnectionString(builder.Resource));
     }
 }
+/**/

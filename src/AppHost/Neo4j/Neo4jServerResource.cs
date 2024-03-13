@@ -1,5 +1,5 @@
 ﻿namespace Aspire.Neo4j.AppHost.Neo4j;
-
+/*
 public class Neo4jServerResource : ContainerResource, IResourceWithConnectionString
 {
     internal const string PrimaryEndpointName = "bolt";
@@ -31,3 +31,4 @@ public class Neo4jServerResource : ContainerResource, IResourceWithConnectionStr
 
     public string? ConnectionStringExpression => ConnectionString.ValueExpression;
 }
+/**/

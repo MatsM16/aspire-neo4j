@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
 
 namespace Aspire.Neo4j;
@@ -90,13 +91,12 @@ public static class AspireNeo4jExtensions
         if (serviceKey is null)
         {
             builder.Services.AddSingleton(CreateDriver);
+            builder.Services.AddSingleton(sp => new Neo4jLoggerBridge(sp.GetRequiredService<ILoggerFactory>().CreateLogger("Neo4j.Driver")));
         }
         else
         {
             builder.Services.AddKeyedSingleton(serviceKey, CreateDriver);
+            builder.Services.AddKeyedSingleton(serviceKey, (sp, _) => new Neo4jLoggerBridge(sp.GetRequiredService<ILoggerFactory>().CreateLogger("Neo4j.Driver_" + serviceKey)));
         }
-
-        // We only need one of these per application.
-        builder.Services.TryAddSingleton<Neo4jLoggerBridge>();
     }
 }

@@ -1,27 +1,23 @@
 using Aspire.Neo4j;
 using Microsoft.AspNetCore.Mvc;
 using Neo4j.Driver;
+using Neo4j.Driver.Preview.Mapping;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.AddNeo4jDriver("neo4j");
-
-builder.Services.AddKeyedTransient("friendDb", (sp, key) =>
+builder.AddNeo4jDriver("neo4j", settings =>
 {
-    var driver = sp.GetRequiredService<IDriver>();
-    return driver.AsyncSession(x => x.WithDatabase(key.ToString()));
+    settings.ConnectionString = "bolt://localhost:7687";
 });
 
 var app = builder.Build();
-
-await using var session = app.Services.GetRequiredKeyedService<IAsyncSession>("friendDb");
+/*
+await using var session = app.Services.GetRequiredKeyedService<IAsyncSession>(DB_NAME);
 await session.ExecuteWriteAsync(async query =>
 {
     await query.RunAsync(
@@ -48,7 +44,7 @@ await session.ExecuteWriteAsync(async query =>
         MERGE (d)-[:KNOWS]->(c)
         """);
 });
-
+/**/
 app.MapDefaultEndpoints();
 
 app.UseSwagger();
@@ -56,74 +52,112 @@ app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
-app.MapGet("/person", ([FromKeyedServices("friendDb")] IAsyncSession session) =>
-{
-    var result = session.ExecuteReadAsync(async query =>
-    {
-        var cursor = await query.RunAsync("MATCH (n:Person) RETURN n");
-        var peopleRecords = await cursor.ToListAsync();
-        return peopleRecords.Select(record => new Person(record["name"].As<string>()));
-    });
+app.MapGet("/greet", () => Results.Ok("Hello World!"));
 
+
+app.MapGet("/person", async (IDriver driver, CancellationToken cancellationToken) =>
+{
+    var result = await driver
+        .ExecutableQuery("MATCH (n:Person) RETURN n.name as Name")
+        .ExecuteAsync(cancellationToken)
+        .AsObjectsAsync<Person>()
+        .ConfigureAwait(false);
+
+    return Results.Ok(result);
 })
 .WithName("GetPeople")
-.WithOpenApi();
+.WithOpenApi()
+.Produces<List<Person>>(200);
 
-app.MapGet("/person/{name}", ([FromKeyedServices("friendDb")] IAsyncSession session, string name) =>
+app.MapGet("/person/{name}", async (IDriver driver, string name, CancellationToken cancellationToken) =>
 {
-    var result = session.ExecuteReadAsync(async query =>
-    {
-        var cursor = await query.RunAsync("MATCH (n:Person {name: $name}) RETURN n", new { name });
-        var peopleRecords = await cursor.ToListAsync();
-        return peopleRecords.Select(record => new Person(record["name"].As<string>())).FirstOrDefault();
-    });
+    if (string.IsNullOrEmpty(name))
+        return Results.Problem("Name is required", statusCode: 400);
+
+    var result = await driver
+        .ExecutableQuery("MATCH (n:Person {name: $name}) RETURN n.name as Name").WithParameters(new { name })
+        .ExecuteAsync(cancellationToken)
+        .AsObjectsAsync<Person>()
+        .ConfigureAwait(false);
+
+    return Results.Ok(result.FirstOrDefault());
 
 })
 .WithName("GetPerson")
-.WithOpenApi();
+.WithOpenApi()
+.Produces<Person>(200)
+.ProducesProblem(400);
 
-app.MapGet("/person/{name}/friends", ([FromKeyedServices("friendDb")] IAsyncSession session, string name) =>
+app.MapGet("/person/{name}/friends", async (IDriver driver, string name, CancellationToken cancellationToken) =>
 {
-    var result = session.ExecuteReadAsync(async query =>
-    {
-        var cursor = await query.RunAsync("MATCH (a:Person {name: $name}) -[:KNOWS]->(b:Person) RETURN b", new { name });
-        var peopleRecords = await cursor.ToListAsync();
-        return peopleRecords.Select(record => new Person(record["name"].As<string>())).FirstOrDefault();
-    });
+    if (string.IsNullOrEmpty(name))
+        return Results.Problem("Name is required", statusCode: 400);
 
+    var result = await driver
+        .ExecutableQuery("MATCH (a:Person {name: $name}) -[:KNOWS]->(b:Person) RETURN b.name as Name").WithParameters(new { name })
+        .ExecuteAsync(cancellationToken)
+        .AsObjectsAsync<Person>()
+        .ConfigureAwait(false);
+
+    return Results.Ok(result);
 })
 .WithName("GetFriends")
-.WithOpenApi();
+.WithOpenApi()
+.Produces<List<Person>>(200)
+.ProducesProblem(400);
 
-app.MapPost("/person", ([FromKeyedServices("friendDb")] IAsyncSession session, [FromBody] Person person) =>
+app.MapPost("/person", async (IDriver driver, [FromBody] Person person, CancellationToken cancellationToken) =>
 {
-    var result = session.ExecuteWriteAsync(async query =>
-    {
-        await query.RunAsync("CREATE (n:Person {name: $name})", new { name = person.Name });
-    });
+    if (person is null)
+        return Results.Problem("Person is required", statusCode: 400);
 
+    if (string.IsNullOrEmpty(person.Name))
+        return Results.Problem("Person.Name is required", statusCode: 400);
+
+    await driver
+        .ExecutableQuery("CREATE (n:Person {name: $name})").WithParameters(new { name = person.Name })
+        .ExecuteAsync(cancellationToken);
+
+    return Results.Ok(person);
 })
 .WithName("CreatePerson")
-.WithOpenApi();
+.WithOpenApi()
+.Produces<Person>(200)
+.ProducesProblem(400);
 
-app.MapPost("/person/{name}/friends", ([FromKeyedServices("friendDb")] IAsyncSession session, string name, [FromBody] Person person) =>
+app.MapPost("/person/{name}/friends", async (IDriver driver, string name, [FromBody] Person person, CancellationToken cancellationToken) =>
 {
-    var result = session.ExecuteWriteAsync(async query =>
-    {
-        await query.RunAsync(
-            """
+    if (string.IsNullOrEmpty(name))
+        return Results.Problem("Name is required", statusCode: 400);
+
+    if (person is null)
+        return Results.Problem("Person is required", statusCode: 400);
+
+    if (string.IsNullOrEmpty(person.Name))
+        return Results.Problem("Person.Name is required", statusCode: 400);
+
+    await driver
+        .ExecutableQuery("""
             MATCH (a:Person {name: $name_a})
             MATCH (b:Person {name: $name_b})
             MERGE (a)-[:KNOWS]->(b)
             MERGE (b)-[:KNOWS]->(a)
-            """, new { name_a = person.Name, name_b = name });
-    });
+            """)
+        .WithParameters(new { name_a = person.Name, name_b = name })
+        .ExecuteAsync(cancellationToken)
+        .ConfigureAwait(false);
+
+    return Results.Ok();
 
 })
 .WithName("MakeFriend")
-.WithOpenApi();
+.WithOpenApi()
+.Produces(200)
+.ProducesProblem(400);
 
 app.Run();
 
-
-record Person(string Name);
+record Person()
+{
+    public string? Name { get; init; }
+}
