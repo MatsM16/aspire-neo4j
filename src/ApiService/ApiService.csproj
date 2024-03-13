@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Aspire.Neo4j\Aspire.Neo4j.csproj" />
-    <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

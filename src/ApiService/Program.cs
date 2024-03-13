@@ -5,8 +5,6 @@ using Neo4j.Driver.Preview.Mapping;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -45,7 +43,6 @@ await session.ExecuteWriteAsync(async query =>
         """);
 });
 /**/
-app.MapDefaultEndpoints();
 
 app.UseSwagger();
 app.UseSwaggerUI();
