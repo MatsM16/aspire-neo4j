@@ -1,6 +1,6 @@
 ﻿namespace AppHost.Neo4j;
-/*
-public sealed class Neo4jServerResource : ContainerResource
+
+public sealed class Neo4jServerResource : ContainerResource, IResourceWithConnectionString
 {
     internal const string PrimaryEndpointName = "bolt";
     internal const string DashboardEndpointName = "http";
@@ -9,26 +9,20 @@ public sealed class Neo4jServerResource : ContainerResource
     {
         PrimaryEndpoint = new(this, PrimaryEndpointName);
         DashboardEndpoint = new(this, DashboardEndpointName);
-
-        PasswordInput = new(this, "password");
     }
 
     public EndpointReference PrimaryEndpoint { get; }
 
     public EndpointReference DashboardEndpoint { get; }
 
-    internal InputReference PasswordInput { get; }
-
-    private ReferenceExpression ConnectionString =>
-        ReferenceExpression.Create(
-            $"bolt://neo4j:{PasswordInput}@{PrimaryEndpoint.Property(EndpointProperty.Host)}:{PrimaryEndpoint.Property(EndpointProperty.Port)}");
-
     public string Username => "neo4j";
-    public string Password => "neo4j";
-    //public string Password => PasswordInput.Input.Value ?? throw new InvalidOperationException("Password cannot be null.");
+    public string Password => "supersecretpassword";
 
-    public ValueTask<string?> GetConnectionStringAsync(CancellationToken cancellationToken = default) => ConnectionString.GetValueAsync(cancellationToken);
+    public string? GetConnectionString()
+    {
+        var uri = new Uri(PrimaryEndpoint.Value);
+        return $"{uri.Scheme}://{Username}:{Password}@{uri.Host}:{uri.Port}";
+    }
 
-    public string? ConnectionStringExpression => ConnectionString.ValueExpression;
+    public string? ConnectionStringExpression => $"wip";
 }
-/**/

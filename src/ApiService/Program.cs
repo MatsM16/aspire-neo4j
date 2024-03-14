@@ -10,15 +10,14 @@ builder.Services.AddSwaggerGen();
 
 builder.AddNeo4jDriver("neo4j", settings =>
 {
-    settings.ConnectionString = "bolt://localhost:7687";
+    settings.ConnectionString = "bolt://neo4j:supersecretpassword@localhost:7687";
 });
 
 var app = builder.Build();
-/*
-await using var session = app.Services.GetRequiredKeyedService<IAsyncSession>(DB_NAME);
-await session.ExecuteWriteAsync(async query =>
-{
-    await query.RunAsync(
+
+await app.Services
+    .GetRequiredService<IDriver>()
+    .ExecutableQuery(
         """
         CREATE (a:Person {name: 'Alice'})
         CREATE (b:Person {name: 'Bob'})
@@ -40,9 +39,8 @@ await session.ExecuteWriteAsync(async query =>
         
         MERGE (c)-[:KNOWS]->(d)
         MERGE (d)-[:KNOWS]->(c)
-        """);
-});
-/**/
+        """)
+    .ExecuteAsync();
 
 app.UseSwagger();
 app.UseSwaggerUI();
