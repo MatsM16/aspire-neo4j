@@ -10,7 +10,8 @@ builder.Services.AddSwaggerGen();
 
 builder.AddNeo4jDriver("neo4j", settings =>
 {
-    settings.ConnectionString = "bolt://neo4j:supersecretpassword@localhost:7687";
+    settings.Tracing = true;
+    settings.HealthChecks = true;
 });
 
 var app = builder.Build();

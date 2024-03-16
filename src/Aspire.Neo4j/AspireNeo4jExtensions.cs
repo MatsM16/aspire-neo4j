@@ -1,8 +1,9 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Data.Common;
 using Neo4j.Driver;
 
 namespace Aspire.Neo4j;
@@ -62,26 +63,32 @@ public static class AspireNeo4jExtensions
         var settings = new Neo4jDriverSettings();
         configSection.Bind(settings);
 
-        if (builder.Configuration.GetConnectionString(connectionName) is string connectionString)
+        if (builder.Configuration.GetConnectionString(connectionName) is string configConnectionString)
         {
-            settings.ConnectionString = connectionString;
+            settings.ConnectionString = configConnectionString;
         }
 
         configureSettings?.Invoke(settings);
 
         ArgumentException.ThrowIfNullOrWhiteSpace(settings.ConnectionString, nameof(settings) + '.' + nameof(settings.ConnectionString));
 
+        var connectionString = new DbConnectionStringBuilder
+        {
+            ConnectionString = settings.ConnectionString
+        };
+
+        var host = GetHost(connectionString);
+        var authToken = GetAuthToken(connectionString);
+
         IDriver CreateDriver(IServiceProvider services)
         {
-            var connectionDetails = new Uri(settings.ConnectionString);
-            var host = $"{connectionDetails.Scheme}://{connectionDetails.Host}:{connectionDetails.Port}";
-            var token = connectionDetails.UserInfo?.Split(':') is [ { Length: > 0} username, { Length: > 0 } password]
-                ? AuthTokens.Basic(username, password)
-                : AuthTokens.None;
+            var logger = serviceKey is null
+                ? services.GetRequiredService<Neo4jLoggerBridge>()
+                : services.GetRequiredKeyedService<Neo4jLoggerBridge>(serviceKey);
 
-            var driver = GraphDatabase.Driver(host, token, config =>
+            var driver = GraphDatabase.Driver(host, authToken, config =>
             {
-                config.WithLogger(services.GetRequiredService<Neo4jLoggerBridge>());
+                config.WithLogger(logger);
                 configureDriver?.Invoke(config);
             });
 
@@ -98,5 +105,69 @@ public static class AspireNeo4jExtensions
             builder.Services.AddKeyedSingleton(serviceKey, CreateDriver);
             builder.Services.AddKeyedSingleton(serviceKey, (sp, _) => new Neo4jLoggerBridge(sp.GetRequiredService<ILoggerFactory>().CreateLogger("Neo4j.Driver_" + serviceKey)));
         }
+
+        if (settings.HealthChecks)
+        {
+            builder.Services.AddHealthChecks().Add(new HealthCheckRegistration(
+                serviceKey is null ? "neo4j" : $"neo4j_{serviceKey}",
+                sp => new Neo4jHealthCheck(serviceKey is null
+                    ? sp.GetRequiredService<IDriver>()
+                    : sp.GetRequiredKeyedService<IDriver>(serviceKey)),
+                failureStatus: default,
+                tags: default,
+                timeout: default));
+        }
+
+        if (settings.Tracing)
+        {
+            // Add OpenTelemetry tracing
+            builder.Services
+                .AddOpenTelemetry()
+                .WithTracing(tracerBuilder =>
+                {
+                    tracerBuilder.AddSource(ActivitySourceName);
+                });
+        }
+
+        if (settings.Metrics)
+        {
+            // Add OpenTelemetry tracing
+            builder.Services
+                .AddOpenTelemetry()
+                .WithTracing(tracerBuilder =>
+                {
+                    tracerBuilder.AddSource(ActivitySourceName);
+                });
+        }
+    }
+
+    private static string GetHost(DbConnectionStringBuilder connectionString)
+    {
+        if (connectionString["host"] is string host)
+        {
+            return host;
+        }
+
+        throw new FormatException("The connection string must contain a 'host' property.");
+    }
+
+    private static IAuthToken GetAuthToken(DbConnectionStringBuilder connectionString)
+    {
+        if (connectionString["username"] is string username && connectionString["password"] is string password)
+        {
+            return AuthTokens.Basic(username, password);
+        }
+
+        if (connectionString["bearer"] is string bearerToken)
+        {
+            return AuthTokens.Bearer(bearerToken);
+        }
+
+        if (connectionString["kerberos"] is string kerberosToken)
+        {
+            return AuthTokens.Kerberos(kerberosToken);
+        }
+
+        return AuthTokens.None;
     }
 }

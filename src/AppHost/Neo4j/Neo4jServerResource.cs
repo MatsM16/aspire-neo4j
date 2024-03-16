@@ -21,7 +21,7 @@ public sealed class Neo4jServerResource : ContainerResource, IResourceWithConnec
     public string? GetConnectionString()
     {
         var uri = new Uri(PrimaryEndpoint.Value);
-        return $"{uri.Scheme}://{Username}:{Password}@{uri.Host}:{uri.Port}";
+        return $"Host={uri.Scheme}://{uri.Host}:{uri.Port};Username={Username};Password={Password}";
     }
 
     public string? ConnectionStringExpression => $"wip";
